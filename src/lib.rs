@@ -502,7 +502,7 @@ impl<'a> Read for &'a mut [u8] {
     type ReadError = Void;
 
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, Self::ReadError> {
-        let mut immutable : &[u8] = self;
+        let mut immutable: &[u8] = self;
         immutable.read(buf)
     }
 }
@@ -527,4 +527,28 @@ impl<'a> Write for &'a mut [u8] {
     }
 
     fn size_hint(&mut self, _bytes: usize) {}
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    #[test]
+    fn test_read_immutable() {
+        let src = [0u8; 2];
+        let mut slice = src.as_slice();
+        let mut dest = [255u8; 1];
+        let res = slice.read(&mut dest[..]).unwrap();
+        assert_eq!(res, 1);
+        assert_eq!(dest, [0]);
+    }
+    #[test]
+    fn test_read_mutable() {
+        let mut src = [0u8; 2];
+        let mut slice = src.as_mut_slice();
+        let mut dest = [255u8; 1];
+        let res = slice.read(&mut dest[..]).unwrap();
+        assert_eq!(res, 1);
+        assert_eq!(dest, [0]);
+    }
 }
