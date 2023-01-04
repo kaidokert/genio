@@ -21,6 +21,8 @@ extern crate void;
 #[cfg(feature = "std")]
 pub mod std_impls;
 
+use core::mem::replace;
+
 pub mod bufio;
 pub mod error;
 pub mod ext;
@@ -503,7 +505,9 @@ impl<'a> Read for &'a mut [u8] {
 
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, Self::ReadError> {
         let mut immutable: &[u8] = self;
-        immutable.read(buf)
+        let amt = immutable.read(buf)?;
+        *self = &mut replace(self, &mut [])[amt..];
+        Ok(amt)
     }
 }
 
@@ -535,20 +539,27 @@ mod tests {
     use super::*;
     #[test]
     fn test_read_immutable() {
-        let src = [0u8; 2];
+        let src = [0, 1];
         let mut slice = src.as_slice();
         let mut dest = [255u8; 1];
         let res = slice.read(&mut dest[..]).unwrap();
         assert_eq!(res, 1);
         assert_eq!(dest, [0]);
+        assert_eq!(slice, [1]);
     }
     #[test]
     fn test_read_mutable() {
-        let mut src = [0u8; 2];
+        let mut src = [0, 1, 2, 3];
         let mut slice = src.as_mut_slice();
         let mut dest = [255u8; 1];
         let res = slice.read(&mut dest[..]).unwrap();
         assert_eq!(res, 1);
         assert_eq!(dest, [0]);
+        assert_eq!(slice, [1, 2, 3]);
+
+        let mut dest2 = [255u8; 2];
+        let res = slice.read(&mut dest2[..]).unwrap();
+        assert_eq!(res, 2);
+        assert_eq!(slice, [3]);
     }
 }
